@@ -1,0 +1,11 @@
+{
+  "autodeleteOnUpdate": false,
+  "author": "",
+  "description": {"": "Ständer für 2 Handys"},
+  "editEnabled": true,
+  "id": "6c1f0b52-3d7a-4c1e-9a55-2f4e8d1b7a10",
+  "runOnStartup": false,
+  "supportedOS": "windows|mac",
+  "type": "script",
+  "version": "1.0.0"
+}
