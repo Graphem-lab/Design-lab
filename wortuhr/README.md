@@ -2,7 +2,12 @@
 
 Design für UV-Direktdruck auf Glas. Motiv: **Höhenlinien-Karte der Region Rhein-Waal** mit dem Rhein als Leitlinie
 (fließt wie in echt von Südost nach Nordwest), Kartenrahmen mit Skalenstrichen und den Koordinaten der beiden
-Standorte **Kleve** (51°47′N 6°08′E) und **Kamp-Lintfort** (51°30′N 6°32′E).
+Standorte **Kleve** (51°47′N 6°08′E) und **Kamp-Lintfort** (51°30′N 6°32′E), oben mittig das
+**HSRW-Logo** (Primärvariante, invers/weiß).
+
+> **Logo-Nutzung:** Laut CD-Basics (Seite 3) darf die Wort-/Bildmarke nur auf Anfrage und zu dienstlichen Zwecken
+> verwendet werden; für studentische/private Projekte ist keine Freigabe vorgesehen. Vor der Nutzung/Weitergabe
+> Freigabe einholen (marketing@hochschule-rhein-waal.de). Ohne Logo erzeugen: `LOGO=0 python3 generate.py`.
 
 Die 110 Buchstaben sind *Fenster* in einer dunklen Fläche. Im Ruhezustand verschwinden sie in den Höhenlinien,
 mit Licht von hinten leuchten sie klar.
@@ -21,7 +26,13 @@ Reihe unter dem Raster). `out/check_zellen.png` legt deine Kästchen (rot) über
 | `preview_aus.png` / `preview_an.png` / `preview_alle.png` | Simulation: Uhr aus, 09:27 Uhr, alle Buchstaben an |
 | `check_zellen.png` | Kontrolle: Kästchen aus deinem SVG (rot) über dem Design |
 
-Alle Schrift ist in Pfade umgewandelt (Inter SemiBold, SIL OFL) – keine Schriften nötig. Maße sind 1:1 in mm.
+Es gibt zwei Farbwelten: `out/` (Wasser-Teal) und `out_hsrw-farben/` (HSRW-Hausfarben Dunkelblau/Mittelblau/Cyan).
+
+Alle Schrift ist in Pfade umgewandelt (Hausschrift **DIN OT**, aus `../DINOT/`) – keine Schriften nötig. Maße sind 1:1 in mm.
+
+**Logo im Druck:** Das weiße Logo ist in der Farbebene eine **Aussparung** der dunklen Fläche; weiß wird es durch die
+Weiß-Ebene dahinter (deshalb Weiß mit guter Deckkraft, ggf. 2×). Logobreite 58 mm (CD-Minimum 34 mm), Schutzzone
+28 % der Logohöhe ist frei von Linien und Text. Das Logo wird nicht eingefärbt oder verändert (CD: keine Abweichungen).
 
 ## Druckaufbau (Vorschlag – bitte mit der Druckerei abstimmen)
 
@@ -41,14 +52,15 @@ die Weiß-/Schwarz-Maske im RIP um ca. 0.1 mm „spreizen“ (Fenster werden min
 
 ## Wichtige Hinweise
 
-* Buchstaben sind Inter SemiBold, **8 mm Versalhöhe** (automatisch so gewählt, dass W/M/Ü mit 0,6 mm Rand ins
-  Kästchen passen). Dein SVG nutzt Arial; ich habe die Schrift bewusst gewechselt, sag Bescheid falls es Arial sein soll.
+* Buchstaben sind **DIN OT Bold** (Hausschrift; die FF DIN selbst liegt nicht vor), Versalhöhe wird automatisch so
+  gewählt, dass W/M/Ü mit 0,6 mm Rand ins Kästchen passen.
 * Minutenpunkte sind Fenster Ø 6 mm wie im SVG. Für kleinere Punkte `DOT_R` in `generate.py` ändern.
 * Das Easter Egg „HSRW“ aus dem ersten Entwurf entfällt: in deinem Layout gibt es keine 4 zusammenhängenden Füllbuchstaben.
 * Alles Wichtige liegt **12 mm** innerhalb der Kante (Kartenrahmen), falls der Uhrenrahmen die Ränder überdeckt.
   Die Seitenränder (je ~60 mm) tragen die Koordinaten von Kleve und Kamp-Lintfort senkrecht.
-* Die Farben (Petrol/Teal) sind eine **Wasser-Anspielung, nicht die offiziellen HSRW-Corporate-Farben**; das Logo ist
-  nicht enthalten. Hex-Werte oben in `generate.py` (RGB am Bildschirm, im RIP nach CMYK wandeln).
+* `out/` (Petrol/Teal) ist eine Wasser-Anspielung, `out_hsrw-farben/` nutzt die offiziellen Hausfarben aus den CD-Basics
+  (erzeugen mit `PALETTE=hsrw OUT_DIR=out_hsrw-farben python3 generate.py`). Hex-Werte oben in `generate.py`
+  (RGB am Bildschirm, im RIP nach CMYK wandeln).
 * Die Vorschau ist eine Simulation. **Vor dem Druck der ganzen Scheibe unbedingt einen Teststreifen drucken**
   (Tarnung vs. Helligkeit hängt von LED, Abstand und Farbe der Uhren-Rückseite ab; eine dunkelblaugraue statt
   tiefschwarzer Rückwand macht die Buchstaben im Ruhezustand noch unauffälliger).
@@ -58,6 +70,7 @@ die Weiß-/Schwarz-Maske im RIP um ca. 0.1 mm „spreizen“ (Fenster werden min
 
 ```bash
 pip install fonttools scikit-image shapely scipy numpy
+python3 extract_logo.py ../00_202406_HSRW_CD_Basics.pdf   # nur falls assets/ neu erzeugt werden soll
 python3 generate.py
 NODE_PATH=$(npm root -g) node render.js   # PNG/PDF (benötigt Playwright)
 ```

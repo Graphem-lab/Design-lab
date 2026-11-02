@@ -39,8 +39,19 @@ CELL_W, CELL_H = 12.0, 14.0            # Kästchen (Lichtkammer) pro Buchstabe
 GRID_CX, GRID_CY = 150.0, 150.0        # Mitte des Rasters auf der Scheibe
 CAP_MAX = 9.6                          # max. Höhe der Großbuchstaben; wird automatisch verkleinert,
 CELL_PAD = 0.6                         # damit jeder Buchstabe (inkl. W, M, Ü) mit diesem Rand ins Kästchen passt
-FONT = "/usr/share/fonts/opentype/inter/Inter-SemiBold.otf"
-FONT_MEDIUM = "/usr/share/fonts/opentype/inter/Inter-Medium.otf"
+_REPO = pathlib.Path(__file__).resolve().parent.parent
+FONT = str(_REPO / "DINOT" / "DINOT-Bold.ttf")            # Hausschrift HSRW (DIN OT)
+FONT_MEDIUM = str(_REPO / "DINOT" / "DINOT-Medium.ttf")
+if not pathlib.Path(FONT).exists():                       # Fallback ohne Repo-Schriften
+    FONT = "/usr/share/fonts/opentype/inter/Inter-SemiBold.otf"
+    FONT_MEDIUM = "/usr/share/fonts/opentype/inter/Inter-Medium.otf"
+
+# HSRW-Logo (Primärvariante, invers/weiß) – nur mit Freigabe der Hochschule verwenden!
+LOGO = os.environ.get("LOGO", "1") != "0"
+LOGO_JSON = pathlib.Path(__file__).parent / "assets" / "hsrw_logo_primaer_invers.json"
+LOGO_W = 58.0          # Breite in mm (CD: Primärvariante mind. 34 mm)
+LOGO_CY = 36.0         # vertikale Mitte
+LOGO_ZONE = 0.28       # Schutzzone als Anteil der Logohöhe (CD: keine Elemente in der Schutzzone)
 
 # Minuten-Punkte (Fenster in den Ecken)
 DOT_R = 3.0                            # Radius des Lichtfensters (Ø 6 mm wie im SVG)
@@ -126,8 +137,8 @@ class Face:
         self.gs = self.font.getGlyphSet()
         self.cmap = self.font.getBestCmap()
         self.upm = self.font["head"].unitsPerEm
-        self.cap = self.font["OS/2"].sCapHeight
         self.fmt = lambda v: f"{v:.3f}".rstrip("0").rstrip(".")
+        self.cap = self.font["OS/2"].sCapHeight or self.bbox("H")[3]
 
     def name(self, ch):
         return self.cmap[ord(ch)]
@@ -186,6 +197,34 @@ def cell_center(r, c):
 
 def dot_centers():
     return [(x, DOT_Y) for x in DOT_X]
+
+
+def logo_geometry():
+    """Logo-Pfad in mm (absolute Koordinaten) + Schutzzone als Rechteck (x0, y0, x1, y1)."""
+    if not LOGO:
+        return "", None
+    import json, re
+    j = json.loads(LOGO_JSON.read_text())
+    k = LOGO_W / j["w"]
+    h = j["h"] * k
+    ox, oy = SIZE / 2 - LOGO_W / 2, LOGO_CY - h / 2
+    toks = iter(re.findall(r"-?\d+\.?\d*|[A-Za-z]", j["d"]))
+    out = []
+    for t in toks:
+        if t.isalpha():
+            out.append(t)
+        else:
+            out.append(f"{f2(float(t) * k + ox)} {f2(float(next(toks)) * k + oy)}")
+    m = LOGO_ZONE * h
+    return " ".join(out), (ox - m, oy - m, ox + LOGO_W + m, oy + h + m)
+
+
+def zone_polygon():
+    _, zone = logo_geometry()
+    if not zone:
+        return None
+    x0, y0, x1, y1 = zone
+    return box(x0 + 3.5, y0 + 3.5, x1 - 3.5, y1 - 3.5).buffer(3.5)
 
 
 def circle_d(cx, cy, r):
@@ -262,6 +301,9 @@ def terrain():
 
 def contour_paths(f, mm):
     inner = box(FRAME_INSET, FRAME_INSET, SIZE - FRAME_INSET, SIZE - FRAME_INSET)
+    zp = zone_polygon()
+    if zp is not None:
+        inner = inner.difference(zp)       # Schutzzone ums Logo bleibt frei
     levels = np.arange(np.floor(f.min() / LEVEL_STEP) * LEVEL_STEP, f.max(), LEVEL_STEP)
     minor, major = [], []
     for k, lv in enumerate(levels):
@@ -284,6 +326,9 @@ def contour_paths(f, mm):
 
 def river_paths(river):
     inner = box(FRAME_INSET, FRAME_INSET, SIZE - FRAME_INSET, SIZE - FRAME_INSET)
+    zp = zone_polygon()
+    if zp is not None:
+        inner = inner.difference(zp)
     ls = LineString(river)
     out = []
     for off, w, col in [(0, 0.7, RIVER), (3.2, 0.28, RIVER), (-3.2, 0.28, RIVER)]:
@@ -317,8 +362,9 @@ def labels(face_m):
     ytop, ybot = 37.0, 277.0
     side = 33.0
     items = []
-    d, _ = text_path(face_m, "RHINE-WAAL UNIVERSITY OF APPLIED SCIENCES", SIZE / 2, ytop, 2.0, 0.32, "middle"); items.append((d, ""))
-    d, _ = text_path(face_m, "HOCHSCHULE RHEIN-WAAL", SIZE / 2, ybot, 2.8, 0.38, "middle"); items.append((d, ""))
+    if not LOGO:
+        d, _ = text_path(face_m, "RHINE-WAAL UNIVERSITY OF APPLIED SCIENCES", SIZE / 2, ytop, 2.0, 0.32, "middle"); items.append((d, ""))
+        d, _ = text_path(face_m, "HOCHSCHULE RHEIN-WAAL", SIZE / 2, ybot, 2.8, 0.38, "middle"); items.append((d, ""))
     for txt, x, rot in [("KLEVE · 51°47′N 6°08′E", side, -90), ("KAMP-LINTFORT · 51°30′N 6°32′E", SIZE - side, 90)]:
         d, _ = text_path(face_m, txt, x, SIZE / 2, 2.0, 0.32, "middle")
         items.append((d, f' transform="rotate({rot} {f2(x)} {f2(SIZE / 2)})"'))
@@ -336,7 +382,8 @@ def window_cutout(letters, dots):
 
 def color_layer(letters, dots, minor, major, rivers, labs):
     g = []
-    g.append(f'<path d="{window_cutout(letters, dots)}" fill="{BASE}" fill-rule="evenodd"/>')
+    logo_d, zone = logo_geometry()
+    g.append(f'<path d="{window_cutout(letters, dots)} {logo_d}" fill="{BASE}" fill-rule="evenodd" id="basis"/>')
     if WINDOW_TINT > 0:
         g.append(f'<path d="{" ".join(p for *_, p in letters)}" fill="{BASE}" fill-opacity="{WINDOW_TINT}" '
                  f'id="tarnung-tint"/>')
@@ -416,6 +463,7 @@ def main():
         dots_src = "".join(f'<path d="{d}" fill="{LED}"/>' for i, d in enumerate(dots) if i < dots_on)
         if lit or dots_on:
             parts.append(f'<g filter="url(#glow)">{glow_src}{dots_src}</g>')
+        parts.append(mask_layer(letters, dots, "#ffffff"))   # Weiß-Ebene hinter der Farbe (macht die Logo-Aussparung weiß)
         parts.append(f'<g>{col}</g>')
         if unlit_dim:
             # ohne weiße Hinterlegung wirken Linien im Fenster dunkler als außen
