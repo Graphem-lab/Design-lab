@@ -31,8 +31,8 @@ Es gibt zwei Farbwelten: `out/` (Wasser-Teal) und `out_hsrw-farben/` (HSRW-Hausf
 Alle Schrift ist in Pfade umgewandelt (Hausschrift **DIN OT**, aus `../DINOT/`) – keine Schriften nötig. Maße sind 1:1 in mm.
 
 **Logo im Druck:** Das weiße Logo ist in der Farbebene eine **Aussparung** der dunklen Fläche; weiß wird es durch die
-Weiß-Ebene dahinter (deshalb Weiß mit guter Deckkraft, ggf. 2×). Logobreite 58 mm (CD-Minimum 34 mm), Schutzzone
-28 % der Logohöhe ist frei von Linien und Text. Das Logo wird nicht eingefärbt oder verändert (CD: keine Abweichungen).
+Weiß-Ebene dahinter (deshalb Weiß mit guter Deckkraft, ggf. 2×). Logobreite 78 mm (CD-Minimum 34 mm), Schutzzone
+12 % der Logohöhe ist frei von Linien und Text. Das Logo wird nicht eingefärbt oder verändert (CD: keine Abweichungen).
 
 ## Druckaufbau (Vorschlag – bitte mit der Druckerei abstimmen)
 

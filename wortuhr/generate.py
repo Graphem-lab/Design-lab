@@ -49,9 +49,9 @@ if not pathlib.Path(FONT).exists():                       # Fallback ohne Repo-S
 # HSRW-Logo (Primärvariante, invers/weiß) – nur mit Freigabe der Hochschule verwenden!
 LOGO = os.environ.get("LOGO", "1") != "0"
 LOGO_JSON = pathlib.Path(__file__).parent / "assets" / "hsrw_logo_primaer_invers.json"
-LOGO_W = 58.0          # Breite in mm (CD: Primärvariante mind. 34 mm)
-LOGO_CY = 36.0         # vertikale Mitte
-LOGO_ZONE = 0.28       # Schutzzone als Anteil der Logohöhe (CD: keine Elemente in der Schutzzone)
+LOGO_W = 78.0          # Breite in mm (CD: Primärvariante mind. 34 mm); max. ~79 mm passen zwischen Rahmen und Buchstaben
+LOGO_CY = 35.4         # vertikale Mitte
+LOGO_ZONE = 0.12       # Schutzzone als Anteil der Logohöhe
 
 # Minuten-Punkte (Fenster in den Ecken)
 DOT_R = 3.0                            # Radius des Lichtfensters (Ø 6 mm wie im SVG)
