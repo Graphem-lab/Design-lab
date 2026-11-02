@@ -1,11 +1,11 @@
 // SVG -> PNG (Vorschau) und SVG -> PDF (Druckebenen) mit Chromium
 const { chromium } = require('playwright');
 const fs = require('fs'), path = require('path');
-const out = path.join(__dirname, 'out');
+const out = path.join(__dirname, process.argv[2] || 'out');
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1600, height: 1600 } });
-  for (const n of ['preview_aus', 'preview_an', 'preview_alle', 'check_zellen']) {
+  for (const n of ['preview_aus', 'preview_an', 'preview_alle']) {
     const svg = fs.readFileSync(path.join(out, n + '.svg'), 'utf8')
       .replace(/width="300(\.0)?mm" height="300(\.0)?mm"/, 'width="1600" height="1600"');
     await page.setContent(`<body style="margin:0;background:#000">${svg}</body>`);

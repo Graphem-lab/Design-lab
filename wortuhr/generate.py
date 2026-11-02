@@ -23,7 +23,8 @@ from scipy.ndimage import distance_transform_edt, gaussian_filter
 from shapely.geometry import LineString, box
 from skimage import measure
 
-OUT = pathlib.Path(__file__).parent / "out"
+import os
+OUT = pathlib.Path(__file__).parent / os.environ.get("OUT_DIR", "out")
 OUT.mkdir(exist_ok=True)
 
 # ----------------------------------------------------------------------------
@@ -49,14 +50,25 @@ DOT_X = [99.9, 133.3, 166.7, 200.1]
 # Kartenrahmen: nichts Wichtiges außerhalb, falls der Rahmen der Uhr die Kante überdeckt
 FRAME_INSET = 12.0
 
-# Farben (so wie sie von vorne aussehen sollen)
-BASE = "#08151d"       # sehr dunkles Petrol – bewusst fast schwarz
-LINE_MINOR = "#143f4a"
-LINE_MAJOR = "#1f6573"
-RIVER = "#2f8e9d"
-TEXT = "#2c7381"
-LED = "#fff1d6"        # LED-Lichtfarbe nur für die Vorschau
-INTERIOR = "#03080b"   # dunkle Rückseite der Uhr (Vorschau)
+# Farben (so wie sie von vorne aussehen sollen). PALETTE=wasser (Standard) oder PALETTE=hsrw (Hausfarben)
+PALETTE = os.environ.get("PALETTE", "wasser")
+if PALETTE == "hsrw":
+    # Hausfarben laut HSRW CD-Basics 06/2024: Dunkelblau #35255C, Mittelblau #3973B9, Cyan #009FD7
+    BASE = "#0d0919"       # sehr dunkle Abstufung von HSRW Dunkelblau
+    LINE_MINOR = "#1c2a57"
+    LINE_MAJOR = "#2a4f94"  # ~ HSRW Mittelblau, abgedunkelt
+    RIVER = "#009fd7"      # HSRW Cyan
+    TEXT = "#3973b9"       # HSRW Mittelblau
+    LED = "#f4f8ff"
+    INTERIOR = "#04030a"
+else:
+    BASE = "#08151d"       # sehr dunkles Petrol – bewusst fast schwarz
+    LINE_MINOR = "#143f4a"
+    LINE_MAJOR = "#1f6573"
+    RIVER = "#2f8e9d"
+    TEXT = "#2c7381"
+    LED = "#fff1d6"        # LED-Lichtfarbe nur für die Vorschau
+    INTERIOR = "#03080b"   # dunkle Rückseite der Uhr (Vorschau)
 
 # Tarnung: feine Tönung (Rasterfläche in der Hintergrundfarbe) in den Buchstaben-Fenstern.
 # 0 = Fenster komplett klar (max. Helligkeit, Buchstaben im Ruhezustand sichtbarer)
