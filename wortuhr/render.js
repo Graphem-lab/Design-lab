@@ -5,7 +5,7 @@ const out = path.join(__dirname, 'out');
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1600, height: 1600 } });
-  for (const n of ['preview_aus', 'preview_an', 'preview_alle']) {
+  for (const n of ['preview_aus', 'preview_an', 'preview_alle', 'check_zellen']) {
     const svg = fs.readFileSync(path.join(out, n + '.svg'), 'utf8')
       .replace(/width="300(\.0)?mm" height="300(\.0)?mm"/, 'width="1600" height="1600"');
     await page.setContent(`<body style="margin:0;background:#000">${svg}</body>`);

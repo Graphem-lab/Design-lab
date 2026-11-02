@@ -33,15 +33,18 @@ SIZE = 300.0
 
 # Buchstabenraster – HIER an die eigene Uhr anpassen (Mittelpunkte der Buchstaben)
 COLS, ROWS = 11, 10
-PITCH_X, PITCH_Y = 22.0, 22.0          # Abstand Buchstabe zu Buchstabe
+PITCH_X, PITCH_Y = 16.7, 18.7          # Abstand Kästchen-Mitte zu Kästchen-Mitte (aus deinem SVG)
+CELL_W, CELL_H = 12.0, 14.0            # Kästchen (Lichtkammer) pro Buchstabe
 GRID_CX, GRID_CY = 150.0, 150.0        # Mitte des Rasters auf der Scheibe
-CAP_H = 12.0                           # Höhe der Großbuchstaben
+CAP_MAX = 9.6                          # max. Höhe der Großbuchstaben; wird automatisch verkleinert,
+CELL_PAD = 0.6                         # damit jeder Buchstabe (inkl. W, M, Ü) mit diesem Rand ins Kästchen passt
 FONT = "/usr/share/fonts/opentype/inter/Inter-SemiBold.otf"
 FONT_MEDIUM = "/usr/share/fonts/opentype/inter/Inter-Medium.otf"
 
 # Minuten-Punkte (Fenster in den Ecken)
-DOT_R = 1.7                            # Radius des Lichtfensters
-DOT_INSET = 24.0                       # Abstand der Punktmitte vom Scheibenrand
+DOT_R = 3.0                            # Radius des Lichtfensters (Ø 6 mm wie im SVG)
+DOT_Y = 259.8                          # Reihe der 4 Minuten-LEDs unter dem Raster
+DOT_X = [99.9, 133.3, 166.7, 200.1]
 
 # Kartenrahmen: nichts Wichtiges außerhalb, falls der Rahmen der Uhr die Kante überdeckt
 FRAME_INSET = 12.0
@@ -61,32 +64,31 @@ INTERIOR = "#03080b"   # dunkle Rückseite der Uhr (Vorschau)
 WINDOW_TINT = 0.35
 
 # Reihe 4 enthält 4 Füllbuchstaben (sonst "FUNK") -> hier steckt das Kürzel der Hochschule
-ROWS_TEXT = [
-    "ESKISTAFÜNF",
+ROWS_TEXT = [   # "Echtes Layout deiner Frontplatte" (matrix.cpp)
+    "ESRISTAFÜNF",
     "ZEHNZWANZIG",
     "DREIVIERTEL",
-    "VORHSRWNACH",
+    "BVORUNNACHZ",
     "HALBAELFÜNF",
-    "EINSXAMZWEI",
-    "DREIPMJVIER",
+    "EINSXZWEIPI",
+    "QDREIUJVIER",
     "SECHSNLACHT",
     "SIEBENZWÖLF",
-    "ZEHNEUNKUHR",
+    "ZEHNEUNOUHR",
 ]
 
 # (Reihe, Startspalte, Länge) – für die Vorschau "Uhr an"
-WORDS = {
+WORDS = {   # (Reihe, Startspalte, Länge) – identisch zu matrix.cpp
     "ES": (0, 0, 2), "IST": (0, 3, 3), "FÜNF_M": (0, 7, 4), "ZEHN_M": (1, 0, 4),
-    "ZWANZIG": (1, 4, 7), "DREIVIERTEL": (2, 0, 11), "VIERTEL": (2, 4, 7),
-    "VOR": (3, 0, 3), "NACH": (3, 8, 3), "HALB": (4, 0, 4), "ELF": (4, 5, 3),
-    "FÜNF_H": (4, 7, 4), "EINS": (5, 0, 4), "ZWEI": (5, 7, 4), "DREI": (6, 0, 4),
-    "VIER": (6, 7, 4), "SECHS": (7, 0, 5), "ACHT": (7, 7, 4), "SIEBEN": (8, 0, 6),
-    "ZWÖLF": (8, 6, 5), "ZEHN_H": (9, 0, 4), "NEUN": (9, 3, 4), "UHR": (9, 8, 3),
+    "ZWANZIG": (1, 4, 7), "VIERTEL": (2, 4, 7), "VOR": (3, 1, 3), "NACH": (3, 6, 4),
+    "HALB": (4, 0, 4), "ELF": (4, 5, 3), "FÜNF_H": (4, 7, 4), "EINS": (5, 0, 4),
+    "ZWEI": (5, 5, 4), "DREI": (6, 1, 4), "VIER": (6, 7, 4), "SECHS": (7, 0, 5),
+    "ACHT": (7, 7, 4), "SIEBEN": (8, 0, 6), "ZWÖLF": (8, 6, 5), "ZEHN_H": (9, 0, 4),
+    "NEUN": (9, 3, 4), "UHR": (9, 8, 3),
 }
-WORDS["NACH"] = (3, 7, 4)
-# 09:25 Uhr  ->  "ES IST FÜNF VOR HALB ZEHN"
+# 09:27 Uhr  ->  "ES IST FÜNF VOR HALB ZEHN" + 2 Minutenpunkte
 DEMO_WORDS = ["ES", "IST", "FÜNF_M", "VOR", "HALB", "ZEHN_H"]
-DEMO_DOTS = 0
+DEMO_DOTS = 2
 
 # Höhenlinien / Rhein
 SEED = 11
@@ -171,8 +173,7 @@ def cell_center(r, c):
 
 
 def dot_centers():
-    a, b = DOT_INSET, SIZE - DOT_INSET
-    return [(a, a), (b, a), (b, b), (a, b)]
+    return [(x, DOT_Y) for x in DOT_X]
 
 
 def circle_d(cx, cy, r):
@@ -180,8 +181,27 @@ def circle_d(cx, cy, r):
             f"a{f2(r)} {f2(r)} 0 1 0 {f2(-2 * r)} 0Z")
 
 
+def fit_cap(face):
+    """Größte Versalhöhe (<= CAP_MAX), bei der alle verwendeten Buchstaben ins Kästchen passen."""
+    cap = CAP_MAX
+    for ch in sorted(set("".join(ROWS_TEXT))):
+        xmin, ymin, xmax, ymax = face.bbox(ch)
+        k = cap / face.cap                       # Schriftgröße/upm bei aktueller cap
+        w = (xmax - xmin) / face.upm
+        cap = min(cap, (CELL_W - 2 * CELL_PAD) / w * face.cap / face.upm) if w else cap
+        over = (ymax - face.cap) / face.upm      # Überstand (Umlaute) in em
+        # oben: cap/2 + over*size  <= CELL_H/2 - pad ; size = cap*upm/face.cap
+        size_for = lambda c: c * face.upm / face.cap
+        top = lambda c: c / 2 + over * size_for(c)
+        while top(cap) > CELL_H / 2 - CELL_PAD:
+            cap -= 0.05
+    return cap
+
+
 def build_windows(face):
     """Alle Lichtfenster: Buchstaben + Minutenpunkte.  Rückgabe: Liste (Pfad, Zelle)"""
+    global CAP_H
+    CAP_H = fit_cap(face)
     letters = []
     for r, row in enumerate(ROWS_TEXT):
         assert len(row) == COLS, (r, row)
@@ -281,16 +301,15 @@ def neatline():
 
 
 def labels(face_m):
-    """(Pfad, Halo-Pfad-Stil) für alle Beschriftungen. Rückgabe: Liste von Pfadstrings."""
-    ytop, ybot = DOT_INSET + 1.0, SIZE - DOT_INSET + 1.0
-    x0, x1 = DOT_INSET + 12, SIZE - DOT_INSET - 12
+    """Beschriftungen als (Pfad, transform). Oben/unten im Rand, Koordinaten senkrecht in den seitlichen Rändern."""
+    ytop, ybot = 37.0, 277.0
+    side = 33.0
     items = []
-    d, _ = text_path(face_m, "KLEVE", x0, ytop, 1.8, 0.32, "start"); items.append(d)
-    d, _ = text_path(face_m, "RHINE-WAAL UNIVERSITY OF APPLIED SCIENCES", SIZE / 2, ytop, 1.8, 0.32, "middle"); items.append(d)
-    d, _ = text_path(face_m, "KAMP-LINTFORT", x1, ytop, 1.8, 0.32, "end"); items.append(d)
-    d, _ = text_path(face_m, "51°47′N 6°08′E", x0, ybot, 1.8, 0.32, "start"); items.append(d)
-    d, _ = text_path(face_m, "HOCHSCHULE RHEIN-WAAL", SIZE / 2, ybot, 2.5, 0.38, "middle"); items.append(d)
-    d, _ = text_path(face_m, "51°30′N 6°32′E", x1, ybot, 1.8, 0.32, "end"); items.append(d)
+    d, _ = text_path(face_m, "RHINE-WAAL UNIVERSITY OF APPLIED SCIENCES", SIZE / 2, ytop, 2.0, 0.32, "middle"); items.append((d, ""))
+    d, _ = text_path(face_m, "HOCHSCHULE RHEIN-WAAL", SIZE / 2, ybot, 2.8, 0.38, "middle"); items.append((d, ""))
+    for txt, x, rot in [("KLEVE · 51°47′N 6°08′E", side, -90), ("KAMP-LINTFORT · 51°30′N 6°32′E", SIZE - side, 90)]:
+        d, _ = text_path(face_m, txt, x, SIZE / 2, 2.0, 0.32, "middle")
+        items.append((d, f' transform="rotate({rot} {f2(x)} {f2(SIZE / 2)})"'))
     return items
 
 
@@ -317,13 +336,13 @@ def color_layer(letters, dots, minor, major, rivers, labs):
     g.append("</g>")
     g.append(neatline())
     # Halos (Linien um Text/Punkte frei räumen), dann Text
-    for d in labs:
-        g.append(f'<path d="{d}" fill="{BASE}" stroke="{BASE}" stroke-width="1.8" stroke-linejoin="round"/>')
-    for d in labs:
-        g.append(f'<path d="{d}" fill="{TEXT}"/>')
+    for d, tr in labs:
+        g.append(f'<path d="{d}"{tr} fill="{BASE}" stroke="{BASE}" stroke-width="1.8" stroke-linejoin="round"/>')
+    for d, tr in labs:
+        g.append(f'<path d="{d}"{tr} fill="{TEXT}"/>')
     for x, y in dot_centers():
-        g.append(f'<path d="{circle_d(x, y, 3.6)} {circle_d(x, y, DOT_R)}" fill="{BASE}" fill-rule="evenodd"/>')
-        g.append(f'<circle cx="{x}" cy="{y}" r="2.7" fill="none" stroke="{RIVER}" stroke-width="0.28"/>')
+        g.append(f'<path d="{circle_d(x, y, DOT_R + 2.2)} {circle_d(x, y, DOT_R)}" fill="{BASE}" fill-rule="evenodd"/>')
+        g.append(f'<circle cx="{x}" cy="{y}" r="{DOT_R + 1.2}" fill="none" stroke="{RIVER}" stroke-width="0.28"/>')
     return "\n".join(g)
 
 
