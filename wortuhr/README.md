@@ -2,7 +2,8 @@
 
 Design für UV-Direktdruck auf Glas. Motiv: **Höhenlinien-Karte der Region Rhein-Waal** mit dem Rhein als Leitlinie
 (fließt wie in echt von Südost nach Nordwest), Kartenrahmen mit Skalenstrichen und den Koordinaten der beiden
-Standorte **Kleve** (51°47′N 6°08′E) und **Kamp-Lintfort** (51°30′N 6°32′E), oben mittig das
+Standorte **Kleve** (51°47′N 6°08′E) und **Kamp-Lintfort** (51°30′N 6°32′E) als Kartenmarker
+(schematisch, nicht maßstäblich; Kleve liegt wie in Wirklichkeit nordwestlich), oben mittig das
 **HSRW-Logo** (Primärvariante, invers/weiß).
 
 > **Logo-Nutzung:** Laut CD-Basics (Seite 3) darf die Wort-/Bildmarke nur auf Anfrage und zu dienstlichen Zwecken
@@ -31,8 +32,8 @@ Es gibt zwei Farbwelten: `out/` (Wasser-Teal) und `out_hsrw-farben/` (HSRW-Hausf
 Alle Schrift ist in Pfade umgewandelt (Hausschrift **DIN OT**, aus `../DINOT/`) – keine Schriften nötig. Maße sind 1:1 in mm.
 
 **Logo im Druck:** Das weiße Logo ist in der Farbebene eine **Aussparung** der dunklen Fläche; weiß wird es durch die
-Weiß-Ebene dahinter (deshalb Weiß mit guter Deckkraft, ggf. 2×). Logobreite 78 mm (CD-Minimum 34 mm), Schutzzone
-12 % der Logohöhe ist frei von Linien und Text. Das Logo wird nicht eingefärbt oder verändert (CD: keine Abweichungen).
+Weiß-Ebene dahinter (deshalb Weiß mit guter Deckkraft, ggf. 2×). Logo automatisch so groß wie möglich (~92 mm breit, CD-Minimum 34 mm; der obere Kartenrahmen ist dahinter
+unterbrochen), Schutzzone 8 % der Logohöhe ist frei von Linien und Text. Das Logo wird nicht eingefärbt oder verändert (CD: keine Abweichungen).
 
 ## Druckaufbau (Vorschlag – bitte mit der Druckerei abstimmen)
 
@@ -43,8 +44,8 @@ Druck von **hinten** auf die Rückseite des Glases, Datei im RIP **spiegeln**. R
 3. **Schwarz/Blocker** (`layer_2_weiss_schwarz`) – damit das Licht nur durch die Buchstaben tritt
 
 In den Buchstaben und Punkten steht weder Weiß noch Schwarz. Die Buchstaben-Fenster tragen in der Farbebene nur eine
-**35 %-Tönung** in der Hintergrundfarbe (`WINDOW_TINT`) – das ist die „Tarnung“. Sie kostet etwa ein Drittel der
-Helligkeit; bei zu dunklem Licht auf 0.2–0.25 reduzieren, bei zu sichtbaren Buchstaben auf 0.4–0.5 erhöhen.
+**45 %-Tönung** in der Hintergrundfarbe (`WINDOW_TINT`) – das ist die „Tarnung“. Sie kostet etwa ein Drittel der
+Helligkeit; bei zu dunklem Licht auf 0.2–0.25 reduzieren, bei zu sichtbaren Buchstaben auf 0.5–0.6 erhöhen.
 Die Tönung ist als Transparenz (`fill-opacity`) angelegt, das RIP muss daraus ein Raster rechnen.
 
 **Passer:** UV-Drucker haben ~0.1 mm Versatz zwischen den Ebenen. Wenn ein heller Rand um die Buchstaben auftaucht,

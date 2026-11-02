@@ -49,9 +49,9 @@ if not pathlib.Path(FONT).exists():                       # Fallback ohne Repo-S
 # HSRW-Logo (Primärvariante, invers/weiß) – nur mit Freigabe der Hochschule verwenden!
 LOGO = os.environ.get("LOGO", "1") != "0"
 LOGO_JSON = pathlib.Path(__file__).parent / "assets" / "hsrw_logo_primaer_invers.json"
-LOGO_W = 78.0          # Breite in mm (CD: Primärvariante mind. 34 mm); max. ~79 mm passen zwischen Rahmen und Buchstaben
-LOGO_CY = 35.4         # vertikale Mitte
-LOGO_ZONE = 0.12       # Schutzzone als Anteil der Logohöhe
+LOGO_W = None          # None = automatisch so groß wie möglich (CD: Primärvariante mind. 34 mm)
+LOGO_TOP, LOGO_BOTTOM = 9.0, 59.6   # Platz für Logo samt Schutzzone: Scheibenrand (sicher) bis erste Buchstabenreihe
+LOGO_ZONE = 0.08       # Schutzzone als Anteil der Logohöhe (Rahmen/Linien/Text bleiben draußen)
 
 # Minuten-Punkte (Fenster in den Ecken)
 DOT_R = 3.0                            # Radius des Lichtfensters (Ø 6 mm wie im SVG)
@@ -84,7 +84,7 @@ else:
 # Tarnung: feine Tönung (Rasterfläche in der Hintergrundfarbe) in den Buchstaben-Fenstern.
 # 0 = Fenster komplett klar (max. Helligkeit, Buchstaben im Ruhezustand sichtbarer)
 # 0.35 = Buchstaben fast unsichtbar, kostet ca. 1/3 der Helligkeit
-WINDOW_TINT = 0.35
+WINDOW_TINT = 0.45
 
 # Reihe 4 enthält 4 Füllbuchstaben (sonst "FUNK") -> hier steckt das Kürzel der Hochschule
 ROWS_TEXT = [   # "Echtes Layout deiner Frontplatte" (matrix.cpp)
@@ -205,9 +205,12 @@ def logo_geometry():
         return "", None
     import json, re
     j = json.loads(LOGO_JSON.read_text())
-    k = LOGO_W / j["w"]
+    h = (LOGO_BOTTOM - LOGO_TOP) / (1 + 2 * LOGO_ZONE)
+    lw = LOGO_W or h * j["w"] / j["h"]
+    k = lw / j["w"]
     h = j["h"] * k
-    ox, oy = SIZE / 2 - LOGO_W / 2, LOGO_CY - h / 2
+    cy = (LOGO_TOP + LOGO_BOTTOM) / 2
+    ox, oy = SIZE / 2 - lw / 2, cy - h / 2
     toks = iter(re.findall(r"-?\d+\.?\d*|[A-Za-z]", j["d"]))
     out = []
     for t in toks:
@@ -216,7 +219,7 @@ def logo_geometry():
         else:
             out.append(f"{f2(float(t) * k + ox)} {f2(float(next(toks)) * k + oy)}")
     m = LOGO_ZONE * h
-    return " ".join(out), (ox - m, oy - m, ox + LOGO_W + m, oy + h + m)
+    return " ".join(out), (ox - m, oy - m, ox + lw + m, oy + h + m)
 
 
 def zone_polygon():
@@ -224,7 +227,7 @@ def zone_polygon():
     if not zone:
         return None
     x0, y0, x1, y1 = zone
-    return box(x0 + 3.5, y0 + 3.5, x1 - 3.5, y1 - 3.5).buffer(3.5)
+    return box(x0 + 2.5, y0 + 2.5, x1 - 2.5, y1 - 2.5).buffer(2.5)
 
 
 def circle_d(cx, cy, r):
@@ -346,15 +349,40 @@ def river_paths(river):
 # ----------------------------------------------------------------------------
 def neatline():
     a, b = FRAME_INSET, SIZE - FRAME_INSET
-    parts = [f'<rect x="{a}" y="{a}" width="{b - a}" height="{b - a}" fill="none" '
-             f'stroke="{LINE_MAJOR}" stroke-width="0.35"/>']
-    tick = []
+    lines = [LineString([(a, a), (b, a), (b, b), (a, b), (a, a)])]
     step = 5
     for v in range(int(a) + step, int(b), step):
         L = 2.6 if (v - a) % 25 == 0 else 1.3
-        tick.append(f"M{v} {a}v{L}M{v} {b}v{-L}M{a} {v}h{L}M{b} {v}h{-L}")
-    parts.append(f'<path d="{"".join(tick)}" stroke="{LINE_MAJOR}" stroke-width="0.3" fill="none"/>')
-    return "\n".join(parts)
+        lines += [LineString([(v, a), (v, a + L)]), LineString([(v, b), (v, b - L)]),
+                  LineString([(a, v), (a + L, v)]), LineString([(b, v), (b - L, v)])]
+    from shapely.ops import unary_union
+    g = unary_union(lines)
+    zp = zone_polygon()
+    if zp is not None:
+        g = g.difference(zp)               # Rahmen unterbrechen, wo das Logo sitzt
+    d = ""
+    for part in getattr(g, "geoms", [g]):
+        d += "M" + "L".join(f"{f2(x)} {f2(y)}" for x, y in part.coords)
+    return f'<path d="{d}" fill="none" stroke="{LINE_MAJOR}" stroke-width="0.32"/>'
+
+
+# Standorte (schematisch, nicht maßstäblich): Kleve liegt real nordwestlich von Kamp-Lintfort
+SITES = [
+    # Name, Koordinaten, Marker (x, y), Textrichtung: +90 = Text läuft vom Marker nach unten, -90 = nach oben
+    ("KLEVE", "51°47′N 6°08′E", (34.0, 84.0), 90),
+    ("KAMP-LINTFORT", "51°30′N 6°32′E", (266.0, 216.0), -90),
+]
+
+
+def site_markers():
+    out = []
+    for _, _, (x, y), _ in SITES:
+        out.append(f'<circle cx="{x}" cy="{y}" r="5.4" fill="{BASE}"/>')           # Linien freiräumen
+        out.append(f'<circle cx="{x}" cy="{y}" r="3.1" fill="none" stroke="{RIVER}" stroke-width="0.4"/>')
+        out.append(f'<circle cx="{x}" cy="{y}" r="1.15" fill="{RIVER}"/>')
+        out.append(f'<path d="M{x - 5} {y}h2.4M{x + 2.6} {y}h2.4M{x} {y - 5}v2.4M{x} {y + 2.6}v2.4" '
+                   f'stroke="{RIVER}" stroke-width="0.35" fill="none"/>')
+    return "\n".join(out)
 
 
 def labels(face_m):
@@ -365,9 +393,12 @@ def labels(face_m):
     if not LOGO:
         d, _ = text_path(face_m, "RHINE-WAAL UNIVERSITY OF APPLIED SCIENCES", SIZE / 2, ytop, 2.0, 0.32, "middle"); items.append((d, ""))
         d, _ = text_path(face_m, "HOCHSCHULE RHEIN-WAAL", SIZE / 2, ybot, 2.8, 0.38, "middle"); items.append((d, ""))
-    for txt, x, rot in [("KLEVE · 51°47′N 6°08′E", side, -90), ("KAMP-LINTFORT · 51°30′N 6°32′E", SIZE - side, 90)]:
-        d, _ = text_path(face_m, txt, x, SIZE / 2, 2.0, 0.32, "middle")
-        items.append((d, f' transform="rotate({rot} {f2(x)} {f2(SIZE / 2)})"'))
+    for name, coords, (x, y), rot in SITES:
+        y0 = y + 8.5 * (1 if rot > 0 else -1)
+        d, _ = text_path(face_m, name, x - 1.9, y0, 2.6, 0.34, "start")
+        items.append((d, f' transform="rotate({rot} {f2(x - 1.9)} {f2(y0)})"'))
+        d, _ = text_path(face_m, coords, x + 2.6, y0, 1.8, 0.3, "start")
+        items.append((d, f' transform="rotate({rot} {f2(x + 2.6)} {f2(y0)})"'))
     return items
 
 
@@ -396,9 +427,10 @@ def color_layer(letters, dots, minor, major, rivers, labs):
     g.append(neatline())
     # Halos (Linien um Text/Punkte frei räumen), dann Text
     for d, tr in labs:
-        g.append(f'<path d="{d}"{tr} fill="{BASE}" stroke="{BASE}" stroke-width="1.8" stroke-linejoin="round"/>')
+        g.append(f'<path d="{d}"{tr} fill="{BASE}" stroke="{BASE}" stroke-width="3.2" stroke-linejoin="round"/>')
     for d, tr in labs:
         g.append(f'<path d="{d}"{tr} fill="{TEXT}"/>')
+    g.append(site_markers())
     for x, y in dot_centers():
         g.append(f'<path d="{circle_d(x, y, DOT_R + 2.2)} {circle_d(x, y, DOT_R)}" fill="{BASE}" fill-rule="evenodd"/>')
         g.append(f'<circle cx="{x}" cy="{y}" r="{DOT_R + 1.2}" fill="none" stroke="{RIVER}" stroke-width="0.28"/>')
